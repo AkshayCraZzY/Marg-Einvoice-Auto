@@ -1,19 +1,17 @@
-﻿#NoEnv    
+#NoEnv    
 #Persistent
 #SingleInstance, Force
 #Include <WaitPixelColor>
 #include <Gdip_All>
+#include <csv>
+DetectHiddenWindows, On
 SetWorkingDir %A_ScriptDir%
 sGst=%A_WorkingDir%\files\temp_data\sGst.jpg
 gst=%A_WorkingDir%\files\temp_data\gst.txt
+debug_gst=%A_WorkingDir%\files\temp_data\debug_gst.txt
+debug=0
 ;sGst=%A_WorkingDir%\files\temp_data\sGst.jpg
-InputBox, eindate, E-Invoice Date, Please enter date or E-Invoicing., , 210, 150,,,,,
-if ErrorLevel
-{
-    MsgBox,Cancelled search.
-    exitapp
-}
-;eindate = 7
+;MsgBox, 38 ,MargAuto E-Invoice,Is E-Invoice window open?
 if not WinExist("ahk_exe margwin.exe")
 {
 
@@ -22,63 +20,95 @@ Else
 {
     WinActivate
 }
+sleep 300
+Initial:
+    If not (debug)
+        Run, gst.py,,HIDE,pyid
+    ;msgbox, % pyid
+    PixelSearch, Px, Py, 259,143, 260,144, 0xFFE9D2, 2, Fast
+    If ErrorLevel
+    {
+        InputBox, eindate, E-Invoice Date, Please enter date or E-Invoicing., , 210, 150,,,,,
+        if ErrorLevel
+        {
+            MsgBox,Cancelled search.
+            exitapp
+        }
+        ;eindate = 7
+        if not WinExist("ahk_exe margwin.exe")
+        {
 
-Send {Alt}
-sleep 300
-Send {G}
-sleep 300
-Send {G}
-sleep 300
-Send {Enter}
-sleep 300
-Send {Down}
-sleep 300
-Send {Enter}
-sleep 300
-SEND, % eindate
-SLEEP 300
-SEND {ENTER}
-SLEEP 300
-SEND, % eindate
-SLEEP 300
-SEND {ENTER}
-SLEEP 300
-SEND {ENTER}
-SLEEP 300
-MouseMove, 687,875
-varr := WaitPixelColor(0xC8C8C8,687,875,600)
-If ( varr = 0 )
-{
-    SLEEP 300
-    SEND {ESC}
-}
-Else If ( varr = 1 )
-{
-    Msgbox Error!
-}
+        }
+        Else
+        {
+            WinActivate
+        }
 
-SLEEP 300
-PixelSearch, Px, Py, 22,106, 24,108, 0x000000, 2, Fast
-if ErrorLevel
-{
-    MouseClick,, 24, 107,,0
-}
-else
-{
-    MouseClick,, 24, 107,,0
-    SLEEP 500
-    MouseClick,, 24, 107,,0
-}
+        Send {Alt}
+        sleep 300
+        Send {G}
+        sleep 300
+        Send {G}
+        sleep 300
+        Send {Enter}
+        sleep 300
+        Send {Down}
+        sleep 300
+        Send {Enter}
+        sleep 300
+        SEND, % eindate
+        SLEEP 300
+        SEND {ENTER}
+        SLEEP 300
+        SEND, % eindate
+        SLEEP 300
+        SEND {ENTER}
+        SLEEP 300
+        SEND {ENTER}
+        SLEEP 300
+        MouseMove, 687,875
+        varr := WaitPixelColor(0xC8C8C8,687,875,600)
+        If ( varr = 0 )
+        {
+            SLEEP 300
+            SEND {ESC}
+        }
+        Else If ( varr = 1 )
+        {
+            Msgbox Error!
+        }
 
-SLEEP 500
-MouseClick,,1816,90,,0
-sleep 300
-send {AltDown}
-sleep 300
-send Y
-sleep 300
-send {AltUp}
-SLEEP 600
+        SLEEP 300
+        PixelSearch, Px, Py, 22,106, 24,108, 0x000000, 2, Fast
+        if ErrorLevel
+        {
+            MouseClick,, 24, 107,,0
+        }
+        else
+        {
+            MouseClick,, 24, 107,,0
+            SLEEP 500
+            MouseClick,, 24, 107,,0
+        }
+
+        SLEEP 500
+        MouseClick,,1816,90,,0
+        sleep 300
+        send {AltDown}
+        sleep 300
+        send Y
+        sleep 300
+        send {AltUp}
+        SLEEP 600
+    }
+
+LControl & LShift::
+    Gui, Destroy
+    Send {up}
+    sleep 200
+    Gosub, Check
+    return
+
 Check:
 {
     Loop
@@ -87,7 +117,7 @@ Check:
         IF(color=0x48000)
         {
             send {Down}
-            SLEEP 100
+            SLEEP 150
         }
         else if(color=0x0000FF)
         {
@@ -105,16 +135,22 @@ Check:
                 ;MouseGetPos,Tx,Ty
                 Tooltip, Please Wait`n Fetching GST data..,920,540
                 ReplaceSystemCursor("IDC_ARROW","IDC_WAIT")
-                RunWait %comspec% /c  "%A_WorkingDir%\c2t\Capture2Text_CLI.exe  -i %sGst% > %gst%",,hide,Pid
+                Runwait,ocr.py,,hide,pyid
+                ;RunWait %comspec% /c  "%A_WorkingDir%\c2t\Capture2Text_CLI.exe  -i %sGst% > %gst%",,hide,Pid
                 FileReadLine, gstno, %gst%, 1
-                StringReplace gstno, gstno,%A_Space%,, All
-                StringReplace gstno, gstno,:,, All
                 StringReplace gstno, gstno,.,, All
                 StringReplace gstno, gstno,*,, All
                 StringReplace gstno, gstno,#,, All
-                StringReplace gstno, gstno,*,, All
+                ;StringReplace gstno, gstno,:,, All
+                /*
                 StringReplace gstno, gstno,\,, All
                 StringReplace gstno, gstno,’,, All
+                StringReplace gstno, gstno,|,, All
+                StringReplace gstno, gstno,â,, All
+                StringReplace gstno, gstno,€,, All
+                StringReplace gstno, gstno,™,, All
+                */
+
                 file := FileOpen(gst, "w") 
                 file.write(gstno)
                 file.close()
@@ -123,7 +159,7 @@ Check:
             {
                 ReplaceSystemCursor()
                 ToolTip,
-                MsgBox, 54 ,MargAuto Aashirwad Agencies, unable to get gst
+                MsgBox, 54 ,MargAuto E-Invoice, Unable to get proper GST. `n[%gstno%]`nContinue to enter manually.
                 IfMsgBox Cancel
                 {
                     Gui, Destroy
@@ -164,7 +200,8 @@ Check:
             global miss_loc=0
             global miss_pin=0
             global miss=
-            Run, gst.py,,hide,pyid
+            FileDelete, %A_WorkingDir%\files\temp_data\*.csv
+           
            
            
             PixelSearch, Px, Py, 903, 281, 1190,295, 0xA0D1FF, 5, Fast
@@ -191,11 +228,28 @@ Check:
                 miss_pin=1
                 miss=%miss%Pincode
             }
-            ToolTip,Please Wait. Fetching GST data.`nMissing Data:`n%miss%,920,540
-            Process, WaitClose,%pyid%
-            Loop, %A_WorkingDir%\files\temp_data\*.xlsx
-                gstXlPath=%A_Loopfilefullpath%
-            disGST(gstXlPath)
+            If not (debug)
+            {
+                ToolTip,Please Wait. Fetching GST data.`nMissing Data:`n%miss%,920,540
+                While ! FileExist(A_WorkingDir "\files\temp_data\*.csv")
+                    Sleep 250
+                Loop, %A_WorkingDir%\files\temp_data\*.csv
+                    gstCSVPath=%A_Loopfilefullpath%
+                disGST(gstCSVPath)
+            }
+            Else
+            {
+                FileAppend, %gstno%, %debug_gst%
+                WinActivate
+                sleep 200
+                send, {Esc}
+                sleep 200
+                Send {Down}
+                sleep 200
+                Send {Down}
+                SLEEP 100
+                Gosub, Check
+            }
             ReplaceSystemCursor()
             ToolTip,
             if FileExist(sGst)
@@ -205,12 +259,6 @@ Check:
     }
     return
 }
-LControl & LShift::
-    Gui, Destroy
-    Send {up}
-    sleep 200
-    Gosub, Check
-    return
 GuiEscape:
 GuiClose:
         Gui, Destroy
@@ -219,53 +267,61 @@ GuiClose:
 disGST(FilePath)
 {
     global Gst
-    global Name
     global Pin
-    global Add
+    global Loc
+    global Stat
+    global Addr
+
     Gui,+AlwaysOnTop +Caption +LastFound +ToolWindow
     Gui, Font,s11 Bold
-    Gui Add, Text, x0 y0 w166 h24 +0x200 +Center +Border, GSTIN
-    Gui Add, Text, x166 y0 w166 h24 +0x200 +Center +Border, NAME
-    Gui Add, Text, x332 y0 w100 h24 +0x200 +Center +Border, PINCODE
+    Gui Add, Text, x0 y0 w166 h24 +0x200 +Center +Border, PINCODE
+    Gui Add, Text, x166 y0 w166 h24 +0x200 +Center +Border, LOCATION
+    Gui Add, Text, x332 y0 w100 h24 +0x200 +Center +Border, STATUS
     Gui Add, Text, x432 y0 w550 h24 +0x200 +Center +Border, ADDRESS
     Gui, Font,s11 Normal
-    Gui Add, Edit, x0 y24 w166 h21 +Readonly +Center +Disabled vGst
-    Gui Add, Edit, x166 y24 w166 h21 +Readonly +Center +Disabled vName
-    Gui Add, Edit, x332 y24 w100 h21 +wrap +Center +Readonly vPin
-    Gui Add, Edit, x432 y24 w550 h21 -wrap +Readonly vAdd
-    sheight := A_ScreenHeight-305
-    Xl := ComObjCreate("Excel.Application")
-    Xl.Workbooks.Open(FilePath)
-    gstxl:=XL.Range("a2").Value
-    namexl:=XL.Range("c2").Value
-    pinx:=XL.Range("f2").Value
-    pinxl:=floor(pinx)
-    add0:=XL.Range("g2").Value
-    add1:=XL.Range("h2").Value
-    add2:=XL.Range("i2").Value
-    add3:=XL.Range("j2").Value
-    add4:=XL.Range("k2").Value
-    add5:=XL.Range("l2").Value
-    If(gstxl="" or namexl="" or pinxl=0)
+    Gui Add, Edit, x0 y24 w166 h21 +Readonly +Center +Readonly vPin
+    Gui Add, Edit, x166 y24 w166 h21 +Readonly +Center +Readonly vLoc
+    Gui Add, Edit, x332 y24 w100 h21 +wrap +Center +Readonly vStat
+    Gui Add, Edit, x432 y24 w550 h21 -wrap +Readonly vAddr
+    sheight := A_ScreenHeight-505
+    CSV_Load(FilePath,"data")
+    isvalid_csv:=CSV_ReadCell("data",1,1)
+    whyinvalid_csv:=CSV_ReadCell("data",1,2)
+    if(isvalid_csv="INVALID")
     {
-
-        MsgBox, 48 ,MargAuto Aashirwad Agencies,Invalid GST`nUnable to get data.
+        MsgBox, 48 ,MargAuto E-Invoice,Invalid GST`nUnable to get data`nReason: %whyinvalid_csv%.
         Gui, Destroy
-        xl.Quit()
-        xl := ""
         return
     }
-    addxl=%add0% %add1% %add2% %add3% %add4% %add5%
-    GuiControl,, Gst, %gstxl%
-    GuiControl,, Name, %namexl%
-    GuiControl,, Pin, %pinxl%
-    GuiControl,, Add, %addxl%
-    xl.Quit()
-    xl := ""
 
-    Gui Show, y%sheight% w982 h51, %gstxl% Details
-    clipboard := "" 
-    clipboard := pinxl
+    gst_csv:=CSV_ReadCell("data",2,1)
+    pin_csv:=CSV_ReadCell("data",2,2)
+    loc_csv:=CSV_ReadCell("data",2,3)
+    stat_csv:=CSV_ReadCell("data",2,5)
+    addr_csv:=CSV_ReadCell("data",2,4)
+
+
+
+    GuiControl,, Pin, %pin_csv%
+    GuiControl,, Loc, %loc_csv%
+    if (stat_csv="Active")
+    {
+        Gui, Font, cGreen
+        GuiControl, Font, Stat
+        ;return
+    }
+    else
+    {
+        Gui, Font, cRed
+        GuiControl, Font, Stat
+        ;return
+    }
+    GuiControl,, Stat, %stat_csv%
+    GuiControl,, Addr, %addr_csv%
+
+    Gui Show, y%sheight% w982 h51, %gst_csv%
+    ;clipboard := "" 
+    ;clipboard := pin_csv
     if not WinExist("ahk_exe margwin.exe")
     {
 
@@ -277,39 +333,46 @@ disGST(FilePath)
     
     if(miss_addr1=1 or miss_addr2=1 or miss_loc=1 or miss_pin=1)
     {
-        sleep 200
+        sleep 100
         send {Enter}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         if(miss_addr1)
-            SendInput, %add3%
-        sleep 200
+            SendInput, %addr_csv%
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         if(miss_addr2)
-            SendInput, %add4%
-        sleep 200
+            SendInput, %loc_csv%
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         if(miss_loc)
-            SendInput, %add4%
-        sleep 200
+            SendInput, %loc_csv%
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         send {Tab}
-        sleep 200
+        sleep 100
         if(miss_pin)
-            SendInput, %pinxl%
-        SLEEP 200
+            SendInput, %pin_csv%
+        SLEEP 100
+    }
+    Else
+    {
+        Send {Tab}
+        sleep 100
+        Send {Enter}
+        Sleep 100
     }
     Return
     
@@ -346,7 +409,26 @@ ReplaceSystemCursor(old := "", new := "")
    }
 }
 ^X::
-    MSGBOX,STOPPED
+    Process, Close , %pyid%
+    WinClose, ahk_exe chromedriver.exe
+    WinGet, active_id, ID, ahk_exe py.exe
+    Process, Close , %active_id%
+    WinClose, ahk_exe py.exe
+    WinGet, chromeWindows, List, ahk_exe chrome.exe
+    Loop, % chromeWindows
+        WinClose, % "ahk_id " chromeWindows%A_Index%
+    MSGBOX,STOPPED %pyid% %active_id%
     Gui, Destroy
     exitapp
+^z::
+    Process, Close , %pyid%
+    WinClose, ahk_exe chromedriver.exe
+    WinGet, active_id, ID, ahk_exe py.exe
+    Process, Close , %active_id%
+    WinClose, ahk_exe py.exe
+    WinGet, chromeWindows, List, ahk_exe chrome.exe
+    Loop, % chromeWindows
+        WinClose, % "ahk_id " chromeWindows%A_Index%
+    Reload
+
 
